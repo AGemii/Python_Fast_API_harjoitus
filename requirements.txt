@@ -1,0 +1,8 @@
+
+fastapi[standard]
+sqlalchemy
+alembic
+passlib
+argon2-cffi
+pyjwt[crypto]
+python-dotenv
