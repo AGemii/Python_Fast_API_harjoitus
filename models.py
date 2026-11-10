@@ -28,3 +28,17 @@ class Item(Base):
     # relationship EI ole sarake tietokannassa.
     # Se on olemassa vain koodissa, jotta pääset kategoriaan käsiksi nimikkeen kautta.
     category: Mapped['Category'] = relationship('Category', back_populates='items')
+    
+    # Item-luokkaan
+    copies: Mapped[List['ItemCopy']] = relationship('ItemCopy', back_populates='item')
+
+
+class ItemCopy(Base):
+    __tablename__ = 'item_copies'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    # Inventaarionumero, esim. "CAM-001"
+    inventory_code: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
+
+    item_id: Mapped[int] = mapped_column(ForeignKey('items.id'), nullable=False)
+    item: Mapped['Item'] = relationship('Item', back_populates='copies')
