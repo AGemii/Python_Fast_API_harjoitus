@@ -25,7 +25,6 @@ class ABCUserService(abc.ABC):
     @abc.abstractmethod
     def get_user_by_access_token(self, access_token: str) -> models.User | None:
         raise NotImplementedError() # pragma: no cover
-
     
     @abc.abstractmethod
     def set_role(self, user_id: int, role: str) -> models.User:
