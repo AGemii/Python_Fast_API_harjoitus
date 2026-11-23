@@ -1,6 +1,6 @@
 from typing import List, Optional
 
-from sqlalchemy import ForeignKey, Integer, Text
+from sqlalchemy import ForeignKey, Integer, Text, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from db import Base
@@ -42,3 +42,13 @@ class ItemCopy(Base):
 
     item_id: Mapped[int] = mapped_column(ForeignKey('items.id'), nullable=False)
     item: Mapped['Item'] = relationship('Item', back_populates='copies')
+
+class User(Base):
+    __tablename__ = 'users'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    username: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
+    role: Mapped[str] = mapped_column(Text, nullable=False, server_default=text("'user'"))
+    # argon2 tallentaa saltin osaksi hash-merkkijonoa,
+    # joten erillistä salt-saraketta ei tarvita
+    hashed_password: Mapped[str] = mapped_column(Text, nullable=False)

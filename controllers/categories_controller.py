@@ -8,6 +8,7 @@ import dtos.categories
 from custom_exceptions.not_found_exception import NotFoundException
 from factories.services import category_service_factory
 from services.abc_category_service import ABCCategoryService
+from dependencies import require_admin
 
 router = APIRouter(prefix='/api/categories', tags=['categories'])
 
@@ -30,7 +31,7 @@ def get_by_id(category_id: int, _service: CategoryServ) -> dtos.categories.Categ
         raise HTTPException(status_code=404, detail=str(error))
 
 
-@router.post('/', status_code=status.HTTP_201_CREATED)
+@router.post('/', status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_admin)])
 def create(req: dtos.categories.CreateCategoryReq,
            _service: CategoryServ) -> dtos.categories.CategoryDto:
     try:
@@ -38,7 +39,7 @@ def create(req: dtos.categories.CreateCategoryReq,
     except BusinessRuleException as error:
         raise HTTPException(status_code=409, detail=str(error))
 
-@router.put('/{category_id}')
+@router.put('/{category_id}', dependencies=[Depends(require_admin)])
 def update(category_id: int, req: dtos.categories.CreateCategoryReq,
            _service: CategoryServ) -> dtos.categories.CategoryDto:
     try:
@@ -50,8 +51,10 @@ def update(category_id: int, req: dtos.categories.CreateCategoryReq,
 
 
 
-@router.delete('/{category_id}', status_code=status.HTTP_204_NO_CONTENT)
+@router.delete('/{category_id}', status_code=status.HTTP_204_NO_CONTENT,
+               dependencies=[Depends(require_admin)])
 def delete(category_id: int, _service: CategoryServ):
+
     try:
         _service.delete(category_id)
     except NotFoundException as error:

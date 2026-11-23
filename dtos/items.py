@@ -1,5 +1,5 @@
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ItemDto(BaseModel):
@@ -21,3 +21,18 @@ class CreateItemReq(BaseModel):
     description: str | None = Field(default=None, max_length=500)
     # gt=0 varmistaa, että kategorian id on annettu
     category_id: int = Field(gt=0)
+
+
+# lisää tiedoston alkuun: from pydantic import ConfigDict
+
+class CreateItemCopyReq(BaseModel):
+    # Inventaarionumero, esim. "CAM-001"
+    inventory_code: str = Field(min_length=1, max_length=50)
+
+
+class ItemCopyDto(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    inventory_code: str
+    item_id: int

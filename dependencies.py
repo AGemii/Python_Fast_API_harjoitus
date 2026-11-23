@@ -1,0 +1,37 @@
+
+import traceback
+
+from fastapi import Depends, HTTPException
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+
+import models
+from factories.services import user_service_factory
+from services.abc_user_service import ABCUserService
+from custom_exceptions.forbidden_exception import ForbiddenException
+
+
+bearer_scheme = HTTPBearer()
+
+
+def get_logged_in_user(authorization: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+                       _user_service: ABCUserService = Depends(user_service_factory)):
+    try:
+        user = _user_service.get_user_by_access_token(authorization.credentials)
+        if user is None:
+            raise HTTPException(status_code=401, detail="Unauthorized")
+        return user
+    except Exception:
+        traceback.print_exc()
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+def require_admin(authorization: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+                  _user_service: ABCUserService = Depends(user_service_factory)):
+    try:
+        user = get_logged_in_user(authorization, _user_service)
+        if user.role != 'admin':
+            raise ForbiddenException()
+    except ForbiddenException:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    except Exception:
+        raise HTTPException(status_code=401, detail="Unauthorized")

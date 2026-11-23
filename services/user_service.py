@@ -1,0 +1,81 @@
+
+from passlib.hash import argon2
+from sqlalchemy.orm import Session
+
+from custom_exceptions.user_registration_exception import UserRegistrationException
+import models
+from custom_exceptions.not_found_exception import NotFoundException
+from services.abc_user_service import ABCUserService
+from tools.abc_token_tool import ABCTokenTool
+from typing import List
+from sqlalchemy.orm import Query
+
+class UserService(ABCUserService):
+
+    def __init__(self, _repository: Session, _token_tool: ABCTokenTool):
+        self._repository = _repository
+        self._token_tool = _token_tool
+
+    def register(self, username: str, password: str) -> models.User:
+        # Käyttäjänimen pitää olla yksilöllinen. Tietokannan unique-rajoite estäisi
+        # tuplat joka tapauksessa, mutta sen virheestä tulisi käyttäjälle 500.
+        # Tarkistus servicessä antaa selkeän virheen, josta controller tekee 409:n.
+        existing = self._repository.query(models.User).filter_by(username=username).first()
+        if existing is not None:
+            raise UserRegistrationException('username must be unique')
+
+        # argon2.hash palauttaa merkkijonon, johon on pakattu sekä
+        # algoritmin tunniste, parametrit, salt että itse hash.
+        # Erillistä salt-saraketta ei siis tarvita.
+        hashed_password = argon2.hash(password)
+
+        user = models.User(hashed_password=hashed_password, username=username, role='user')
+        self._repository.add(user)
+        self._repository.commit()
+
+        return user
+
+    def get_user_by_username(self, username: str) -> models.User | None:
+        user = self._repository.query(models.User).filter_by(username=username).first()
+        return user
+
+
+    def login(self, username: str, password: str) -> str:
+        # haetaan käyttäjä usernamen perusteella
+        user = self.get_user_by_username(username)
+        if user is None:
+            raise NotFoundException('user not found')
+        if not argon2.verify(password, user.hashed_password):
+            raise NotFoundException('user not found')
+        # tokenin luonti on tämän takana
+        return self._token_tool.create_token(user)
+
+    
+    def get_all(self) -> list[models.User]:
+        # tämä rakentaa queryn
+        users_query: Query = self._repository.query(models.User)
+        # all()-metodin kutsu suorittaa sen
+        users: List[models.User] = users_query.all()
+        return users
+
+    
+    def get_user_by_id(self, _id):
+        return self._repository.query(models.User).filter_by(id=_id).first()
+
+    def get_user_by_access_token(self, access_token: str) -> models.User | None:
+        decoded_payload = self._token_tool.decode_token(access_token)
+        # sub on tokenissa merkkijono, joten se muutetaan takaisin kokonaisluvuksi
+        user = self.get_user_by_id(int(decoded_payload['sub']))
+        return user
+
+
+    def set_role(self, user_id: int, role: str) -> models.User:
+        user = self.get_user_by_id(user_id)
+
+        if user is None:
+            raise NotFoundException(f'user {user_id} not found')
+
+        user.role = role
+        self._repository.commit()
+
+        return user
